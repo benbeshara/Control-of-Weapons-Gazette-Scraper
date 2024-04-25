@@ -3,14 +3,11 @@ import express from "express";
 
 const app = express();
 
-console.info(await listPdfs());
-
-let pdfs = await listPdfs();
-
-app.get("/", (req, res) => {
+app.get("/", async (req, res) => {
   let response = `<html><head><title>Control of Weapons Acts</title></head><body>`;
+  let pdfs = await listPdfs();
   for (let x of pdfs) {
-    response += `<a href=${x["uri"]}>${x["uri"]}</a><br />`;
+    response += `<a href=${x["uri"]}>${x["title"]}</a><br />`;
   }
   response += `</body></html>`;
   res.send(response);

@@ -1,5 +1,5 @@
 import { get } from "node:http";
-import * as pdfjsLib from "pdfjs-dist";
+import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 
 export async function ParsePDF(path) {
   return new Promise((resolve, reject) => {
