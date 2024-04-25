@@ -10,6 +10,6 @@ This is a small Node web scraper that will check the latest gazettes online (pos
 
 ...and check the log output
 
-This is more meant as a base for other projects, like social media/discord bots or for integration intoactivist and abolitionist toolkits.
+This is more meant as a base for other projects, like social media/discord bots or for integration into activist and abolitionist toolkits.
 
 Idea shamelessly stolen from @vicpol_searches on twitter/X, a platform that is now very inaccessible to a lot of people.
