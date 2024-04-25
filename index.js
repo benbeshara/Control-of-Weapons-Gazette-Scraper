@@ -3,7 +3,7 @@ import express from "express";
 
 const app = express();
 
-app.get("/", async (req, res) => {
+app.get("/", (req, res) => {
   let response = `
     <html>
     <head>

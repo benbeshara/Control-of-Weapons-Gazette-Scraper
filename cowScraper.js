@@ -13,7 +13,6 @@ const fetchPdf = async (uri, title) => {
     try {
       ParsePDF(uri).then(async (data) => {
         let row = { uri, title, flagged: false };
-
         // This seems to be the consistent string to look for in the PDFs
         if (data.includes("Control of Weapons Act 1990")) {
           row.flagged = true;
@@ -32,9 +31,11 @@ const updatePdfs = () => {
 
     try {
       jsn = await fs.readFile(cache).then((data) => JSON.parse(data));
+      if (jsn.updated_at > Date.now() - 21600000) {
+        resolve(jsn.data);
+      } else jsn.updated_at = Date.now();
     } catch (err) {
-      console.error(err);
-      jsn = [];
+      jsn = { updated_at: Date.now(), data: [] };
       await fs.writeFile(cache, JSON.stringify(jsn));
     }
 
@@ -50,8 +51,8 @@ const updatePdfs = () => {
             return new Promise((resolve, reject) => {
               let title = $(el).text();
               let newuri = baseurl + $(el).attr("href");
-              for (let i of jsn) {
-                if (i["uri"] === newuri) {
+              for (let i of jsn.data) {
+                if (i.uri === newuri) {
                   reject();
                 }
               }
@@ -66,8 +67,13 @@ const updatePdfs = () => {
           pdfs.map(async (pdf) => fetchPdf(pdf.value[1], pdf.value[0])),
         );
 
-        data = jsn.concat(data);
-        fs.writeFile(cache, JSON.stringify(data));
+        try {
+          jsn.data = jsn.data.concat(data);
+        } catch {
+          jsn.data = data
+        }
+
+        fs.writeFile(cache, JSON.stringify(jsn));
         resolve(data);
       });
     });
