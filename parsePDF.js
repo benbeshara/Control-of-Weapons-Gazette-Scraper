@@ -1,5 +1,5 @@
 import { get } from "node:http";
-import * as pdfjsLib from "pdfjs-dist";
+import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 
 export async function ParsePDF(path) {
   return new Promise((resolve, reject) => {
@@ -21,6 +21,7 @@ export async function ParsePDF(path) {
                 content = content.concat(items);
                 if (i == numPages) {
                   resolve(content);
+                  return;
                 }
               });
             });
@@ -28,6 +29,7 @@ export async function ParsePDF(path) {
         });
       } catch (e) {
         reject(e);
+        return;
       }
     });
   });

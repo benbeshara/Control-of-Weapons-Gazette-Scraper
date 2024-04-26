@@ -1,75 +1,106 @@
-import { load } from "cheerio";
-import { get } from "node:http";
-import { ParsePDF } from "./parsePDF.js";
-import fs from "node:fs/promises";
+import { listPdfs } from "./cowScraper.js";
+import express from "express";
 
-const baseurl = "http://www.gazette.vic.gov.au";
-const url = "http://www.gazette.vic.gov.au/gazette_bin/gazette_archives.cfm";
+const app = express();
 
-const cache = "cache.json";
-
-const fetchPdf = async (uri) => {
-  return new Promise((resolve, reject) => {
-    try {
-      ParsePDF(uri).then(async (data) => {
-        let row = { uri: uri, flagged: false };
-
-        // This seems to be the consistent string to look for in the PDFs
-        if (data.includes("Control of Weapons Act 1990")) {
-          row.flagged = true;
-        }
-        resolve(row);
-      });
-    } catch (e) {
-      reject(e);
+app.get("/", (req, res) => {
+  let response = `
+    <html>
+    <head>
+    <title>Control of Weapons Acts</title>
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    </head>
+    <body>
+    <div class="center">
+    <span class="heading">Control of Weapons Act Notices</span>
+    <span class="subheading">Gazettes sourced from the Victorian Gazette website</span>
+    <ul>
+    <li hx-get="/list"
+        hx-trigger="load"
+        hx-swap="outerHTML"
+    >Loading (If there's a lot of new gazettes, this could take some time)</li>
+    </ul>
+    </div>
+    <style>
+    body {
+      background-color: #225;
+      color: #CCC;
+      font-family: sans-serif;
     }
+    div.center {
+      margin: auto;
+      width: 60%;
+    }
+    span.heading {
+      font-size: 1.8rem;
+      display: block;
+    }
+    span.subheading {
+      font-size: 1.4rem;
+      display: block;
+    }
+    span.uri {
+      font-size: 0.9rem;
+      color: #aaa;
+    }
+    a {
+      color: #CCC;
+      text-decoration: none;
+      font-size: 1.2rem;
+    }
+    ul {
+      width: 80%;
+      list-style-type: none
+    }
+    li {
+      padding: 0.5em 0px;
+    }
+    </style>
+    </body>
+    </html>`;
+  res.send(response);
+});
+
+app.get("/list", async (req, res) => {
+  let pdfs = await listPdfs();
+  pdfs.sort((a, b) => {
+    a = a.uri.toUpperCase();
+    b = b.uri.toUpperCase();
+
+    if (a < b) {
+      return 1;
+    }
+    if (a > b) {
+      return -1;
+    }
+
+    return 0;
   });
-};
 
-const updatePdfs = async () => {
-  let jsn;
-
-  try {
-    jsn = await fs.readFile(cache).then((data) => JSON.parse(data));
-  } catch (err) {
-    console.error(err);
-    jsn = [];
-    await fs.writeFile(cache, JSON.stringify(jsn));
+  let response = "";
+  for (let x of pdfs) {
+    response += `<li><a href=${x["uri"]}>${x["title"]}<br /><span class="uri">${x["uri"]}</span></a></li>`;
   }
+  res.send(response);
+});
 
-  get(url, (res) => {
-    let pageData;
-    res.on("data", (chunk) => (pageData += chunk));
-    res.on("end", async () => {
-      // let pdfs = [];
-      let $ = load(pageData);
-      let gl = $("#special_gazettes a");
+app.get("/latest", async (req, res) => {
+  let pdfs = await listPdfs();
+  pdfs.sort((a, b) => {
+    a = a.uri.toUpperCase();
+    b = b.uri.toUpperCase();
 
-      let pdfs = await Promise.allSettled(
-        gl.map(async (_, el) => {
-          return new Promise((resolve, reject) => {
-            let newuri = baseurl + $(el).attr("href");
-            for (let i of jsn) {
-              if (i["uri"] === newuri) {
-                reject();
-              }
-            }
-            resolve(newuri);
-          });
-        }),
-      );
+    if (a < b) {
+      return 1;
+    }
+    if (a > b) {
+      return -1;
+    }
 
-      pdfs = pdfs.filter((pdf) => pdf.status === "fulfilled");
-
-      await Promise.all(pdfs.map(async (uri) => fetchPdf(uri.value))).then(
-        (data) => {
-          console.log(data);
-          data = jsn.concat(data);
-          fs.writeFile(cache, JSON.stringify(data));
-        },
-      );
-    });
+    return 0;
   });
-};
+  res.send(pdfs);
+});
 
-updatePdfs();
+const PORT = process.env.PORT || 3000;
+app.listen(PORT);
