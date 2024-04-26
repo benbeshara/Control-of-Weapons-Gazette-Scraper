@@ -84,4 +84,22 @@ app.get("/list", async (req, res) => {
   res.send(response);
 });
 
+app.get("/latest", async (req, res) => {
+  let pdfs = await listPdfs();
+  pdfs.sort((a, b) => {
+    a = a.uri.toUpperCase();
+    b = b.uri.toUpperCase();
+
+    if (a < b) {
+      return 1;
+    }
+    if (a > b) {
+      return -1;
+    }
+
+    return 0;
+  });
+  res.send(pdfs);
+});
+
 app.listen(3000);
