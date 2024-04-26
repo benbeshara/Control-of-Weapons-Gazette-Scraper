@@ -31,9 +31,11 @@ const fetchPdf = async (uri, title, hash) => {
         } else redisClient.set(`discarded:${hash}`, "discarded");
 
         resolve();
+        return;
       });
     } catch (e) {
       reject(e);
+      return;
     }
   });
 };
@@ -41,8 +43,9 @@ const fetchPdf = async (uri, title, hash) => {
 const updatePdfs = () => {
   return new Promise(async (resolve, reject) => {
     const updated_at = await redisClient.get("updated_at");
-    if (Number(updated_at) > Date.now() - 21600000) {
+    if (Number(updated_at) > Number(Date.now() - 21600000)) {
       resolve();
+      return;
     }
 
     get(url, (res) => {
@@ -61,12 +64,14 @@ const updatePdfs = () => {
                 .update($(el).attr("href"))
                 .digest("base64");
               let exists = await redisClient.exists(`*:${hash}`);
-              console.log(exists);
+
               if (exists) {
                 reject();
+                return;
               }
 
               resolve([title, newuri, hash]);
+              return;
             });
           }),
         );
@@ -81,6 +86,7 @@ const updatePdfs = () => {
 
         redisClient.set("updated_at", Date.now());
         resolve();
+        return;
       });
     });
   });
@@ -89,9 +95,9 @@ const updatePdfs = () => {
 const getFlaggedPdfs = async () => {
   return new Promise(async (resolve, reject) => {
     let keys = await redisClient.keys("flagged:*");
-    let gazettes = []
+    let gazettes = [];
     for (let key of keys) {
-      gazettes.push(await redisClient.hGetAll(key))
+      gazettes.push(await redisClient.hGetAll(key));
     }
     resolve(gazettes);
   });
