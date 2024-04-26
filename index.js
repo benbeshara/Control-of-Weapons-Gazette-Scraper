@@ -63,6 +63,20 @@ app.get("/", (req, res) => {
 
 app.get("/list", async (req, res) => {
   let pdfs = await listPdfs();
+  pdfs.sort((a, b) => {
+    a = a.uri.toUpperCase();
+    b = b.uri.toUpperCase();
+
+    if (a < b) {
+      return 1;
+    }
+    if (a > b) {
+      return -1;
+    }
+
+    return 0;
+  });
+
   let response = "";
   for (let x of pdfs) {
     response += `<li><a href=${x["uri"]}>${x["title"]}<br /><span class="uri">${x["uri"]}</span></a></li>`;
