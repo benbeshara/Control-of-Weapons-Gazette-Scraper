@@ -3,7 +3,8 @@
   "dependencies": {
     "cheerio": "^1.0.0-rc.12",
     "express": "^4.19.2",
-    "pdfjs-dist": "^4.0.379"
+    "pdfjs-dist": "^4.0.379",
+    "redis": "^4.6.13"
   },
   "name": "cwabot",
   "version": "1.0.0",
