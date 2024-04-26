@@ -102,4 +102,5 @@ app.get("/latest", async (req, res) => {
   res.send(pdfs);
 });
 
-app.listen(3000);
+const PORT = process.env.PORT || 3000;
+app.listen(PORT);
