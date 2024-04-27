@@ -121,7 +121,18 @@ app.get("/latest", async (req, res) => {
   res.send(pdfs);
 });
 
+const sseHeartbeat = (client) => {
+  if (!client) {
+    return;
+  }
+  console.log("beat");
+  client.res.write("event: heartbeat\n");
+  client.res.write("data: baddum baddum\n\n");
+  setTimeout(sseHeartbeat.bind(client), 25000);
+};
+
 const updatePdfsInBackground = (client) => {
+  sseHeartbeat(client);
   listPdfs().then((pdfs) => {
     pdfs.sort((a, b) => {
       a = a.uri.toUpperCase();
