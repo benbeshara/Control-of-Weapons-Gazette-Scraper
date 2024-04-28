@@ -88,7 +88,7 @@ app.get("/", (req, res) => {
       font-size: 0.65rem;
       display: block;
     }
-    @media(max-width: 800px) {
+    @media(max-width: 430px) {
       div.center {
         width: 95%;
       }
