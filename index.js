@@ -24,6 +24,13 @@ app.get("/", (req, res) => {
       Loading (If there's a lot of new gazettes, this could take some time)
     </li>
     </ul>
+    <a
+      class="attribution"
+      href="https://github.com/benbeshara/Control-of-Weapons-Gazette-Scraper"
+      target="_blank"
+    >
+      Source available here under the permissive AGPL-3.0 license
+    </a>
     </div>
     <style>
     body {
@@ -38,14 +45,20 @@ app.get("/", (req, res) => {
     span.heading {
       font-size: 1.8rem;
       display: block;
+      margin-top: 1.0rem;
     }
     span.subheading {
       font-size: 1.4rem;
       display: block;
+      word-wrap: break-word;
+      white-space: normal;
+      margin-bottom: 1rem;
     }
     span.uri {
       font-size: 0.9rem;
       color: #aaa;
+      display: block;
+      word-wrap: break-word;
     }
     a {
       color: #CCC;
@@ -53,11 +66,47 @@ app.get("/", (req, res) => {
       font-size: 1.2rem;
     }
     ul {
-      width: 80%;
-      list-style-type: none
+      margin: 0;
+      padding: 0;
+      list-style-type: none;
     }
     li {
-      padding: 0.5em 0px;
+      padding: 0.5em 1rem;
+      margin: 0 -1rem;
+    }
+    li:hover {
+      background-color: #447;
+    }
+    li:nth-child(2n) {
+      background-color: #114;
+    }
+    li:nth-child(2n):hover {
+      background-color: #225;
+    }
+    .attribution {
+      margin: 1rem 0;
+      font-size: 0.65rem;
+      display: block;
+    }
+    @media(max-width: 800px) {
+      div.center {
+        width: 95%;
+      }
+      span.uri {
+        font-size: 1.0rem;
+        padding-top: 0.5rem;
+      }
+      a {
+        font-size: 1.4rem;
+      }
+      li {
+        padding: 1.0rem;
+        margin: 0;
+        background-color: #336;
+      }
+      .attribution {
+        font-size: 0.8rem;
+      }
     }
     </style>
     </body>
@@ -73,6 +122,9 @@ app.get("/listSSE", async (req, res) => {
     "Cache-Control": "no-cache",
   };
   res.writeHead(200, headers);
+  req.on("close", () => {
+    res.end();
+  });
   const newClient = {
     id: clientId,
     res,
@@ -98,7 +150,7 @@ app.get("/list", async (req, res) => {
 
   let response = "";
   for (let x of pdfs) {
-    response += `<li><a href=${x["uri"]}>${x["title"]}<br /><span class="uri">${x["uri"]}</span></a></li>`;
+    response += `<li><a href=${x["uri"]} target="_blank">${x["title"]}<br /><span class="uri">${x["uri"]}</span></a></li>`;
   }
   res.send(response);
 });
@@ -125,9 +177,8 @@ const sseHeartbeat = (client) => {
   if (!client) {
     return;
   }
-  console.log("beat");
   client.res.write("event: heartbeat\n");
-  client.res.write("data: baddum baddum\n\n");
+  client.res.write("data: badum badum\n\n");
   setTimeout(sseHeartbeat.bind(client), 54000);
 };
 
@@ -150,7 +201,7 @@ const updatePdfsInBackground = (client) => {
 
     let response = "";
     for (let x of pdfs) {
-      response += `<li><a href=${x["uri"]}>${x["title"]}<br /><span class="uri">${x["uri"]}</span></a></li>`;
+      response += `<li><a href=${x["uri"]} target="_blank">${x["title"]}<br /><span class="uri">${x["uri"]}</span></a></li>`;
     }
 
     client.res.write("event: list\n");
