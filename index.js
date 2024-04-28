@@ -128,7 +128,7 @@ const sseHeartbeat = (client) => {
   console.log("beat");
   client.res.write("event: heartbeat\n");
   client.res.write("data: baddum baddum\n\n");
-  setTimeout(sseHeartbeat.bind(client), 25000);
+  setTimeout(sseHeartbeat.bind(client), 54000);
 };
 
 const updatePdfsInBackground = (client) => {
