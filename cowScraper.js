@@ -40,7 +40,7 @@ const fetchPdf = async (uri, title, hash) => {
   });
 };
 
-const updatePdfs = () => {
+export const updatePdfs = () => {
   return new Promise(async (resolve, reject) => {
     const updated_at = await redisClient.get("updated_at");
     if (Number(updated_at) > Number(Date.now() - 21600000)) {
@@ -58,7 +58,7 @@ const updatePdfs = () => {
         let pdfs = await Promise.allSettled(
           gl.map(async (_, el) => {
             return new Promise(async (resolve, reject) => {
-              let title = $(el).text();
+              let title = $(el).text().trim();
               let newuri = baseurl + $(el).attr("href");
               let hash = createHash("sha1")
                 .update($(el).attr("href"))
