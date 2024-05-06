@@ -9,6 +9,7 @@ app.get("/", (req, res) => {
     <head>
     <title>Control of Weapons Acts</title>
     <meta name="viewport" content="width=device-width" />
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
     <script src="https://unpkg.com/htmx.org@2.0.0-beta3"></script>
     <script src="https://unpkg.com/htmx-ext-sse@2.1.0/sse.js"></script>
     </head>
