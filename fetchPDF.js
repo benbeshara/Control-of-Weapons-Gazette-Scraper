@@ -31,8 +31,7 @@ const fetchPdf = async (pdfData) => {
       parentPort.postMessage(`${hash} done`);
       return;
     });
-  } catch (e) {
-    reject(e);
+  } catch {
     parentPort.postMessage(false);
     return;
   }
