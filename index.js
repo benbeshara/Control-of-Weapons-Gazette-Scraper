@@ -22,7 +22,9 @@ app.get("/", (req, res) => {
         sse-close="close"
         sse-swap="list"
         hx-swap="outerHTML">
-      Loading (If there's a lot of new gazettes, this could take some time)
+        <span hx-swap="innerHTML" sse-swap="heartbeat">
+          Loading (If there's a lot of new gazettes, this could take some time)
+        </span>
     </li>
     </ul>
     <a
@@ -174,17 +176,28 @@ app.get("/latest", async (req, res) => {
   res.send(pdfs);
 });
 
-const sseHeartbeat = (client) => {
+const sseHeartbeat = (client, num) => {
+  const loadingMessages = [
+    "Still loading...",
+    "Lots of new ones to crawl apparently, still going...",
+    "Should be done soon?",
+    "Gimme a minute...",
+    "Thanks for being patient :-)",
+    "I should really parallelise the PDF scraping :/",
+  ];
   if (!client) {
     return;
   }
   client.res.write("event: heartbeat\n");
-  client.res.write("data: badum badum\n\n");
-  setTimeout(sseHeartbeat.bind(client), 54000);
+  client.res.write(`data: ${loadingMessages[num]}\n\n`);
+  if (num > 4) {
+    num = 0;
+  } else num++;
+  setTimeout(sseHeartbeat.bind(this, client, num), 20000);
 };
 
 const updatePdfsInBackground = (client) => {
-  sseHeartbeat(client);
+  sseHeartbeat(client, 0);
   listPdfs().then((pdfs) => {
     pdfs.sort((a, b) => {
       a = a.uri.toUpperCase();
