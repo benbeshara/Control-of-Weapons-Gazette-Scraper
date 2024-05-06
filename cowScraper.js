@@ -1,5 +1,6 @@
 import { load } from "cheerio";
 import { get } from "node:http";
+import { Worker } from "node:worker_threads";
 import { ParsePDF } from "./parsePDF.js";
 
 import { createClient } from "redis";
@@ -20,7 +21,7 @@ redisClient
   .then(() => console.log("Connected to Redis"))
   .catch((err) => console.log("Failed to connect to Redis", err));
 
-const fetchPdf = async (uri, title, hash) => {
+const oldFetchPdf = async (uri, title, hash) => {
   return new Promise((resolve, reject) => {
     try {
       ParsePDF(uri).then(async (data) => {
@@ -78,13 +79,37 @@ export const updatePdfs = () => {
 
         pdfs = pdfs.filter((pdf) => pdf.status === "fulfilled");
 
-        await Promise.all(
-          pdfs.map(async (pdf) =>
-            fetchPdf(pdf.value[1], pdf.value[0], pdf.value[2]),
-          ),
-        );
+        const queueCount = pdfs.length;
+        const batchSize = 10;
+        let marker = 0;
+        const batches = [];
 
-        redisClient.set("updated_at", Date.now());
+        while (marker < queueCount) {
+          const end =
+            marker + batchSize > queueCount ? queueCount : marker + batchSize;
+          batches.push(pdfs.slice(marker, end));
+          marker += batchSize + 1;
+        }
+
+        for (let batch of batches) {
+          await Promise.all(
+            batch.map((pdf) => {
+              return new Promise((resolve, reject) => {
+                const pdfWorker = new Worker("./fetchPDF.js", {
+                  workerData: pdf.value,
+                });
+                pdfWorker.on("message", (_) => {
+                  resolve();
+                });
+                pdfWorker.on("error", (e) => {
+                  console.error(`Worker error: ${e}`);
+                  reject(e);
+                });
+              });
+            }),
+          );
+        }
+
         resolve();
         return;
       });
