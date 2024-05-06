@@ -1,6 +1,6 @@
 import { load } from "cheerio";
 import { get } from "node:http";
-import { ParsePDF } from "./parsePDF.js";
+import { Worker } from "node:worker_threads";
 
 import { createClient } from "redis";
 import { createHash } from "node:crypto";
@@ -20,86 +20,102 @@ redisClient
   .then(() => console.log("Connected to Redis"))
   .catch((err) => console.log("Failed to connect to Redis", err));
 
-const fetchPdf = async (uri, title, hash) => {
-  return new Promise((resolve, reject) => {
-    try {
-      ParsePDF(uri).then(async (data) => {
-        let row = { uri, title };
-        // This seems to be the consistent string to look for in the PDFs
-        if (data.includes("Control of Weapons Act 1990")) {
-          redisClient.hSet(`flagged:${hash}`, row);
-        } else redisClient.set(`discarded:${hash}`, "discarded");
-
-        resolve();
-        return;
-      });
-    } catch (e) {
-      reject(e);
-      return;
-    }
-  });
-};
-
 export const updatePdfs = () => {
-  return new Promise(async (resolve, reject) => {
-    const updated_at = await redisClient.get("updated_at");
-    if (Number(updated_at) > Number(Date.now() - 21600000)) {
-      resolve();
-      return;
-    }
+  return new Promise((resolve) => {
+    redisClient
+      .get("updated_at")
+      .then((updated_at) => {
+        if (Number(updated_at) > Number(Date.now() - 21600000)) {
+          resolve();
+          return true;
+        }
+        return false;
+      })
+      .then((halt) => {
+        if (halt) return;
+        get(url, (res) => {
+          let pageData;
+          res.on("data", (chunk) => (pageData += chunk));
+          res.on("end", async () => {
+            let $ = load(pageData);
+            let gl = $("#special_gazettes a");
 
-    get(url, (res) => {
-      let pageData;
-      res.on("data", (chunk) => (pageData += chunk));
-      res.on("end", async () => {
-        let $ = load(pageData);
-        let gl = $("#special_gazettes a");
+            let pdfs = await Promise.allSettled(
+              gl.map(async (_, el) => {
+                return new Promise((resolve, reject) => {
+                  let title = $(el).text().trim();
+                  let newuri = baseurl + $(el).attr("href");
+                  let hash = createHash("sha1")
+                    .update($(el).attr("href"))
+                    .digest("base64");
 
-        let pdfs = await Promise.allSettled(
-          gl.map(async (_, el) => {
-            return new Promise(async (resolve, reject) => {
-              let title = $(el).text().trim();
-              let newuri = baseurl + $(el).attr("href");
-              let hash = createHash("sha1")
-                .update($(el).attr("href"))
-                .digest("base64");
-              let exists = await redisClient.exists(`*:${hash}`);
+                  redisClient
+                    .exists([`flagged:${hash}`, `discarded:${hash}`])
+                    .then((exists) => {
+                      if (exists) {
+                        reject();
+                        return;
+                      } else {
+                        resolve([title, newuri, hash]);
+                        return;
+                      }
+                    });
+                });
+              }),
+            );
 
-              if (exists) {
-                reject();
-                return;
-              }
+            pdfs = pdfs.filter((pdf) => pdf.status === "fulfilled");
 
-              resolve([title, newuri, hash]);
-              return;
-            });
-          }),
-        );
+            const queueCount = pdfs.length;
+            const batchSize = 10;
+            let marker = 0;
+            const batches = [];
 
-        pdfs = pdfs.filter((pdf) => pdf.status === "fulfilled");
+            while (marker < queueCount) {
+              const end =
+                marker + batchSize > queueCount
+                  ? queueCount
+                  : marker + batchSize;
+              batches.push(pdfs.slice(marker, end));
+              marker += batchSize + 1;
+            }
 
-        await Promise.all(
-          pdfs.map(async (pdf) =>
-            fetchPdf(pdf.value[1], pdf.value[0], pdf.value[2]),
-          ),
-        );
+            for (let batch of batches) {
+              await Promise.all(
+                batch.map((pdf) => {
+                  return new Promise((resolve, reject) => {
+                    const pdfWorker = new Worker("./fetchPDF.js", {
+                      workerData: pdf.value,
+                    });
+                    pdfWorker.on("message", () => {
+                      resolve();
+                    });
+                    pdfWorker.on("error", (e) => {
+                      console.error(`Worker error: ${e}`);
+                      reject(e);
+                    });
+                  });
+                }),
+              );
+            }
 
-        redisClient.set("updated_at", Date.now());
-        resolve();
-        return;
+            resolve();
+            return;
+          });
+        });
       });
-    });
   });
 };
 
 const getFlaggedPdfs = async () => {
-  return new Promise(async (resolve, reject) => {
-    let keys = await redisClient.keys("flagged:*");
-    let gazettes = [];
-    for (let key of keys) {
-      gazettes.push(await redisClient.hGetAll(key));
-    }
-    resolve(gazettes);
+  return new Promise((resolve) => {
+    redisClient.keys("flagged:*").then(async (keys) => {
+      let gazettes = [];
+      for (let key of keys) {
+        gazettes.push(await redisClient.hGetAll(key));
+      }
+      resolve(gazettes);
+    });
   });
 };
 
