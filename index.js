@@ -1,7 +1,10 @@
 import { listPdfs } from "./cowScraper.js";
+import favicon from "serve-favicon";
 import express from "express";
 
 const app = express();
+
+app.use(favicon("favicon.ico"));
 
 app.get("/", (req, res) => {
   let response = `
