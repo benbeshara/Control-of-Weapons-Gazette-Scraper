@@ -1,11 +1,18 @@
 version: "3.8"
 services:
   redis:
+    depends_on:
+      - helper
     image: redis:4
     restart: always
     container_name: cache
     ports:
       - 6379:6379
+
+  helper:
+    image: alpine
+    command: sh -c "echo never > /sys/kernel/mm/transparent_hugepage/enabled"
+    privileged: true
 
   app:
     depends_on:
