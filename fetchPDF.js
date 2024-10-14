@@ -2,7 +2,7 @@ import { parentPort, workerData } from "worker_threads";
 import { createClient } from "redis";
 import { ParsePDF } from "./parsePDF.js";
 
-const redis_url = process.end.REDIS_URL;
+const redis_url = process.env.REDIS_URL;
 const redisClient = createClient({
   url: redis_url,
   socket: {
