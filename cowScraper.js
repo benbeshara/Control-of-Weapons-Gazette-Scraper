@@ -9,7 +9,14 @@ const baseurl = "http://www.gazette.vic.gov.au";
 const url = "http://www.gazette.vic.gov.au/gazette_bin/gazette_archives.cfm";
 
 // Create a Redis client object
-const redisClient = createClient({ url: process.env.REDIS_URL });
+const redis_url = process.end.REDIS_URL;
+const redisClient = createClient({
+  url: redis_url,
+  socket: {
+    tls: redis_url.match(/rediss:/) != null,
+    rejectUnauthorized: false,
+  },
+});
 
 // Handle connection errors
 redisClient.on("error", (err) => console.log("Redis Client Error", err));

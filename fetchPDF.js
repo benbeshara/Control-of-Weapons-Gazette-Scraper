@@ -2,7 +2,15 @@ import { parentPort, workerData } from "worker_threads";
 import { createClient } from "redis";
 import { ParsePDF } from "./parsePDF.js";
 
-const redisClient = createClient({ url: process.env.REDIS_URL });
+const redis_url = process.end.REDIS_URL;
+const redisClient = createClient({
+  url: redis_url,
+  socket: {
+    tls: redis_url.match(/rediss:/) != null,
+    rejectUnauthorized: false,
+  },
+});
+
 redisClient.on("error", (err) =>
   console.log("Redis Client Error (Worker Thread)", err),
 );
